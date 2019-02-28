@@ -1,0 +1,31 @@
+version: "3"
+services:
+  db:
+    image: mysql:5.7
+    ports:
+      - "3306:3306"
+    command: "--innodb_use_native_aio=0"
+    volumes:
+      - /var/lib/mysql/imgtrip-ts-development:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: imgtrip-development
+  adminer:
+    image: adminer:latest
+    ports:
+      - "8306:8080"
+    restart: always
+    depends_on:
+      - db
+    links:
+      - db
+  app-golang:
+    image: registry.gitlab.com/qskane/imgtrip:staging-latest
+    ports:
+      - "9090:9090"
+    command: bash -c "/go/bin/imgtrip -dbhost=db -dbuser=root -dbname=imgtrip-development -dbpassword=root"
+    restart: always
+    depends_on:
+      - db
+    links:
+      - db

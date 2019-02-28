@@ -1,0 +1,60 @@
+image: docker:stable
+
+services:
+  - docker:dind
+
+variables:
+  CONTAINER_IMAGE: $ALIYUN_REGISTRY_HOST/$CI_PROJECT_PATH
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_DRIVER: overlay2
+  SURFACE_NEXT: surface_next.txt
+  STAGING_TAG: staging-latest
+  PROD_TAG: latest
+
+stages:
+  - test
+  - build
+  - deploy
+
+before_script:
+
+build_staging:
+  stage: build
+  only:
+    - staging
+  script:
+    - docker login $ALIYUN_REGISTRY_HOST -u=$ALIYUN_REGISTRY_USER -p=$ALIYUN_REGISTRY_PASSWORD
+    - docker build  --tag $CONTAINER_IMAGE:$CI_COMMIT_SHA .
+    - docker push $CONTAINER_IMAGE:$CI_COMMIT_SHA
+
+deploy_staging:
+  stage: deploy
+  only:
+    - staging
+  script:
+    - apk update && apk add --no-cache sshpass openssh rsync
+    - export SSHPASS=$STAGING_SERVER_PASSWORD
+    - mkdir ~/.ssh && ssh-keyscan $STAGING_SERVER_HOST >> ~/.ssh/known_hosts
+    - echo $CI_COMMIT_SHA > $SURFACE_NEXT
+    - sshpass -e rsync $SURFACE_NEXT $STAGING_SERVER_USER@$STAGING_SERVER_HOST:$SERVER_IMGTRIP_DIR/$SURFACE_NEXT
+
+build_prod:
+  stage: build
+  only:
+    - master
+  script:
+    - docker login $ALIYUN_REGISTRY_HOST -u=$ALIYUN_REGISTRY_USER -p=$ALIYUN_REGISTRY_PASSWORD
+    - docker build  --tag $CONTAINER_IMAGE:$CI_COMMIT_SHA .
+    - docker push $CONTAINER_IMAGE:$CI_COMMIT_SHA
+
+deploy_prod:
+  stage: deploy
+  when: manual
+  only:
+    - master
+  script:
+    - apk update && apk add --no-cache sshpass openssh rsync
+    - export SSHPASS=$PROD_SERVER_PASSWORD
+    - mkdir ~/.ssh && ssh-keyscan $PROD_SERVER_HOST >> ~/.ssh/known_hosts
+    - echo $CI_COMMIT_SHA > $SURFACE_NEXT
+    - sshpass -e rsync $SURFACE_NEXT $PROD_SERVER_USER@$PROD_SERVER_HOST:$SERVER_IMGTRIP_DIR/$SURFACE_NEXT

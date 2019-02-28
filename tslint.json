@@ -1,0 +1,23 @@
+{
+  "rules": {
+    "ordered-imports": false,
+    "object-literal-sort-keys": false,
+    "semicolon": [
+      false,
+      "always"
+    ],
+    "quotemark": [
+      true,
+      "single",
+      "jsx-double"
+    ],
+    "indent": [
+      true,
+      "spaces",
+      2
+    ],
+    "trailing-comma": [
+      false
+    ]
+  }
+}
